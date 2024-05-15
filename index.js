@@ -15,6 +15,20 @@ class CountTracker extends ElementComponent {
     this.step = props.step || 1
   }
 
+  setCount(e) {
+    const { value } = e.target
+    this.count += parseInt(value || 0) * this.step
+    this.setCountDisplay()
+  }
+
+  getCount() {
+    return this.count
+  }
+
+  setCountDisplay() {
+    this.incrementDisplay.textContent = `Count: ${this.getCount()}`
+  }
+
   render() {
     this.incrementDisplay = document.createElement("p")
 
@@ -35,39 +49,12 @@ class CountTracker extends ElementComponent {
     this.addElement(this.incrementButton)
     this.addElement(this.decrementButton)
   }
-
-  setCount(e) {
-    const { value } = e.target
-    this.count += parseInt(value || 0) * this.step
-    this.setCountDisplay()
-  }
-
-  getCount() {
-    return this.count
-  }
-
-  setCountDisplay() {
-    this.incrementDisplay.textContent = `Count: ${this.getCount()}`
-  }
 }
 
 class BasicInputFeedback extends ElementComponent {
   constructor(props) {
     super(props)
     this.feedback = props.feedback || ""
-  }
-
-  render() {
-    this.feedbackDisplay = document.createElement("p")
-    this.setFeedbackDisplay()
-    this.addElement(this.feedbackDisplay)
-
-    this.setCountInput = new InputComponent({
-      type: "text",
-      onChange: this.setFeedback.bind(this),
-      value: this.getFeedback(),
-    })
-    this.addElement(this.setCountInput)
   }
 
   setFeedback(e) {
@@ -82,6 +69,19 @@ class BasicInputFeedback extends ElementComponent {
 
   setFeedbackDisplay() {
     this.feedbackDisplay.textContent = `Input Value: ${this.getFeedback()}`
+  }
+
+  render() {
+    this.feedbackDisplay = document.createElement("p")
+    this.setFeedbackDisplay()
+    this.addElement(this.feedbackDisplay)
+
+    this.setCountInput = new InputComponent({
+      type: "text",
+      onChange: this.setFeedback.bind(this),
+      value: this.getFeedback(),
+    })
+    this.addElement(this.setCountInput)
   }
 }
 

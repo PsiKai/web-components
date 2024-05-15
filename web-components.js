@@ -21,27 +21,6 @@ class ShadowRootContainer extends HTMLElement {
   }
 }
 
-class ButtonComponent extends HTMLButtonElement {
-  constructor(props) {
-    super()
-    this.setButtonProps(props)
-  }
-
-  connectedCallback() {
-    this.addEventListener("click", this.onClick)
-    for (const key in this.attrs) {
-      this.setAttribute(key, this.attrs[key])
-    }
-  }
-
-  setButtonProps(props) {
-    const { onClick, children, ...attrs } = props
-    this.onClick = onClick
-    this.attrs = attrs
-    this.textContent = children
-  }
-}
-
 class ElementComponent extends HTMLElement {
   constructor(props) {
     super()
@@ -50,6 +29,10 @@ class ElementComponent extends HTMLElement {
     }
     this.shadow = props.shadow
     this.elements = []
+  }
+
+  addElement(element) {
+    this.elements.push(element)
   }
 
   connectedCallback() {
@@ -61,10 +44,6 @@ class ElementComponent extends HTMLElement {
 
   render() {
     throw new Error("Method not implemented: render")
-  }
-
-  addElement(element) {
-    this.elements.push(element)
   }
 }
 
@@ -85,6 +64,27 @@ class InputComponent extends HTMLInputElement {
     const { onChange, ...attrs } = props
     this.onChange = onChange
     this.attrs = attrs
+  }
+}
+
+class ButtonComponent extends HTMLButtonElement {
+  constructor(props) {
+    super()
+    this.setButtonProps(props)
+  }
+
+  connectedCallback() {
+    this.addEventListener("click", this.onClick)
+    for (const key in this.attrs) {
+      this.setAttribute(key, this.attrs[key])
+    }
+  }
+
+  setButtonProps(props) {
+    const { onClick, children, ...attrs } = props
+    this.onClick = onClick
+    this.attrs = attrs
+    this.textContent = children
   }
 }
 

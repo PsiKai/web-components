@@ -68,6 +68,27 @@ class ElementComponent extends HTMLElement {
   }
 }
 
+class InputComponent extends HTMLInputElement {
+  constructor(props) {
+    super()
+    this.setInputProps(props)
+  }
+
+  connectedCallback() {
+    this.addEventListener("input", this.onChange)
+    for (const key in this.attrs) {
+      this.setAttribute(key, this.attrs[key])
+    }
+  }
+
+  setInputProps(props) {
+    const { onChange, ...attrs } = props
+    this.onChange = onChange
+    this.attrs = attrs
+  }
+}
+
 customElements.define("shadow-root-container", ShadowRootContainer)
-customElements.define("button-component", ButtonComponent, { extends: "button" })
 customElements.define("element-component", ElementComponent)
+customElements.define("button-component", ButtonComponent, { extends: "button" })
+customElements.define("input-component", InputComponent, { extends: "input" })

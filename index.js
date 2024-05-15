@@ -1,9 +1,10 @@
-/* global ShadowRootContainer, ElementComponent, ButtonComponent */
+/* global ShadowRootContainer, ElementComponent, ButtonComponent, InputComponent */
 
 class App extends ShadowRootContainer {
   render() {
     this.addElement(CountTracker, { step: 2 })
     this.addElement(CountTracker, { step: 20 })
+    this.addElement(BasicInputFeedback, { feedback: "Hello, World!" })
   }
 }
 
@@ -50,5 +51,40 @@ class CountTracker extends ElementComponent {
   }
 }
 
-customElements.define("count-tracker", CountTracker)
+class BasicInputFeedback extends ElementComponent {
+  constructor(props) {
+    super(props)
+    this.feedback = props.feedback || ""
+  }
+
+  render() {
+    this.feedbackDisplay = document.createElement("p")
+    this.setFeedbackDisplay()
+    this.addElement(this.feedbackDisplay)
+
+    this.setCountInput = new InputComponent({
+      type: "text",
+      onChange: this.setFeedback.bind(this),
+      value: this.getFeedback(),
+    })
+    this.addElement(this.setCountInput)
+  }
+
+  setFeedback(e) {
+    const { value } = e.target
+    this.feedback = value
+    this.setFeedbackDisplay()
+  }
+
+  getFeedback() {
+    return this.feedback
+  }
+
+  setFeedbackDisplay() {
+    this.feedbackDisplay.textContent = `Input Value: ${this.getFeedback()}`
+  }
+}
+
 customElements.define("app-container", App)
+customElements.define("count-tracker", CountTracker)
+customElements.define("basic-input-feedback", BasicInputFeedback)

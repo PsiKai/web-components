@@ -28,16 +28,11 @@ class ElementComponent extends HTMLElement {
       throw new Error("ElementComponent must be passed a shadow root")
     }
     this.shadow = props.shadow
-    this.elements = []
-  }
-
-  addElement(element) {
-    this.elements.push(element)
   }
 
   connectedCallback() {
-    this.render()
-    for (const child of this.elements) {
+    const elements = this.render()
+    for (const child of elements) {
       this.shadow.appendChild(child)
     }
   }

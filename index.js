@@ -31,23 +31,21 @@ class CountTracker extends ElementComponent {
 
   render() {
     this.incrementDisplay = document.createElement("p")
-
-    this.incrementButton = new ButtonComponent({
-      onClick: this.setCount.bind(this),
-      children: `Increment by ${this.step}`,
-      value: 1,
-    })
-    this.decrementButton = new ButtonComponent({
-      onClick: this.setCount.bind(this),
-      children: `Decrement by ${this.step}`,
-      value: -1,
-    })
-
     this.setCountDisplay()
 
-    this.addElement(this.incrementDisplay)
-    this.addElement(this.incrementButton)
-    this.addElement(this.decrementButton)
+    return [
+      this.incrementDisplay,
+      new ButtonComponent({
+        onClick: this.setCount.bind(this),
+        children: `Increment by ${this.step}`,
+        value: 1,
+      }),
+      new ButtonComponent({
+        onClick: this.setCount.bind(this),
+        children: `Decrement by ${this.step}`,
+        value: -1,
+      }),
+    ]
   }
 }
 
@@ -74,14 +72,15 @@ class BasicInputFeedback extends ElementComponent {
   render() {
     this.feedbackDisplay = document.createElement("p")
     this.setFeedbackDisplay()
-    this.addElement(this.feedbackDisplay)
 
-    this.setCountInput = new InputComponent({
-      type: "text",
-      onChange: this.setFeedback.bind(this),
-      value: this.getFeedback(),
-    })
-    this.addElement(this.setCountInput)
+    return [
+      this.feedbackDisplay,
+      new InputComponent({
+        type: "text",
+        onChange: this.setFeedback.bind(this),
+        value: this.getFeedback(),
+      }),
+    ]
   }
 }
 

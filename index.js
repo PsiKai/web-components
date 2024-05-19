@@ -2,84 +2,84 @@
 
 class App extends ShadowRootContainer {
   render() {
-    this.addElement(CountTracker, { step: 2 })
-    this.addElement(CountTracker, { step: 20 })
-    this.addElement(BasicInputFeedback, { feedback: "Hello, World!" })
-  }
-}
-
-class CountTracker extends ElementComponent {
-  constructor(props) {
-    super(props)
-    this.count = 0
-    this.step = props.step || 1
-  }
-
-  setCount(e) {
-    const { value } = e.target
-    this.count += parseInt(value || 0) * this.step
-    this.setCountDisplay()
-  }
-
-  getCount() {
-    return this.count
-  }
-
-  setCountDisplay() {
-    this.incrementDisplay.textContent = `Count: ${this.getCount()}`
-  }
-
-  render() {
-    this.incrementDisplay = document.createElement("p")
-    this.setCountDisplay()
-
     return [
-      this.incrementDisplay,
-      new ButtonComponent({
-        onClick: this.setCount.bind(this),
-        children: `Increment by ${this.step}`,
-        value: 1,
-      }),
-      new ButtonComponent({
-        onClick: this.setCount.bind(this),
-        children: `Decrement by ${this.step}`,
-        value: -1,
-      }),
+      // new CountTracker({ step: 2 }),
+      // new CountTracker({ step: 5 }),
+      // new BasicInputFeedback({ feedback: "Hello, World!" }),
+      { tag: "count-tracker", props: { step: 2 } },
+      { tag: "count-tracker", props: { step: 5 } },
+      { tag: "basic-input-feedback", props: { feedback: "Hello, World!" } },
     ]
   }
 }
 
-class BasicInputFeedback extends ElementComponent {
-  constructor(props) {
-    super(props)
-    this.feedback = props.feedback || ""
+class CountTracker extends WebComponent {
+  constructor() {
+    super()
+    this.state = { count: 0 }
+  }
+
+  setCount(e) {
+    const { value } = e.target
+    const newCount = this.state.count + parseInt(value) * this.step
+    this.setState({ count: newCount })
+  }
+
+  render() {
+    this.step = this.getAttribute("step") || 1
+
+    return [
+      { tag: "p", children: `Count: ${this.state.count}` },
+      {
+        tag: "button",
+        props: {
+          onClick: this.setCount.bind(this),
+          value: 1,
+        },
+        children: `Increment by ${this.step}`,
+      },
+      {
+        tag: "button",
+        props: {
+          onClick: this.setCount.bind(this),
+          value: -1,
+        },
+        children: `Decrement by ${this.step}`,
+      },
+    ]
+  }
+}
+
+class BasicInputFeedback extends WebComponent {
+  constructor() {
+    super()
+    this.state = { feedback: "" }
+  }
+
+  static get observedAttributes() {
+    return ["feedback"]
   }
 
   setFeedback(e) {
     const { value } = e.target
-    this.feedback = value
-    this.setFeedbackDisplay()
+    this.setState({ feedback: value })
   }
 
-  getFeedback() {
-    return this.feedback
-  }
-
-  setFeedbackDisplay() {
-    this.feedbackDisplay.textContent = `Input Value: ${this.getFeedback()}`
+  propsDidUpdate() {
+    this.state = { feedback: this.getAttribute("feedback") }
   }
 
   render() {
-    this.feedbackDisplay = document.createElement("p")
-    this.setFeedbackDisplay()
-
     return [
-      this.feedbackDisplay,
-      new InputComponent({
-        type: "text",
-        onChange: this.setFeedback.bind(this),
-        value: this.getFeedback(),
-      }),
+      { tag: "p", children: `Input Value: ${this.state.feedback}` },
+      {
+        tag: "input",
+        props: {
+          type: "text",
+          onChange: this.setFeedback.bind(this),
+          value: this.state.feedback,
+        },
+      },
     ]
   }
 }

@@ -1,89 +1,143 @@
-class ShadowRootContainer extends HTMLElement {
+class WebComponent extends HTMLElement {
   constructor() {
     super()
+    this.state = {}
     this.elements = []
+  }
+
+  connectedCallback() {
+    this.renderChildren()
+  }
+
+  attributeChangedCallback(_name, _oldValue, _newValue) {
+    this.propsDidUpdate()
+  }
+
+  renderChildren() {
+    const elements = this.render()
+    this.compareElements(elements, this.elements)
+    this.elements = elements
+  }
+
+  compareElements(newElements, oldElements, parentElement = this) {
+    const currentElements = parentElement.children
+
+    for (let i = 0; i < newElements.length; i++) {
+      const newElement = newElements[i]
+      const oldElement = oldElements[i]
+
+      const {
+        tag: newElementTag,
+        props: newElementProps,
+        children: newElementChildren,
+      } = newElement
+
+      if (oldElement) {
+        const {
+          tag: oldElementTag,
+          props: oldElementProps,
+          children: oldElementChildren,
+        } = oldElement
+
+        if (newElementTag !== oldElementTag) {
+          this.replaceChild(this.createNewElement(newElement), currentElements[i])
+        } else {
+          const shouldUpdateProps = this.compareProps(newElementProps, oldElementProps)
+          if (shouldUpdateProps) {
+            this.setAttributes(currentElements[i], newElementProps)
+          }
+          this.compareChildren(newElementChildren, oldElementChildren, currentElements[i])
+        }
+      } else {
+        parentElement.appendChild(this.createNewElement(newElement))
+      }
+    }
+  }
+
+  replaceChild(newElement, oldElement) {
+    oldElement.replaceWith(newElement)
+  }
+
+  compareProps(newProps, oldProps) {
+    for (const key in newProps) {
+      if (!Object.is(newProps[key], oldProps[key])) {
+        return true
+      }
+    }
+    return false
+  }
+
+  compareChildren(newChildren, oldChildren, parentElement) {
+    if (typeof newChildren === "string") {
+      if (newChildren !== oldChildren) {
+        parentElement.textContent = newChildren
+      }
+    } else if (!newChildren) {
+      parentElement.innerHTML = ""
+    } else if (Array.isArray(newChildren)) {
+      this.compareElements(newChildren, oldChildren, parentElement)
+    } else {
+      this.compareElements([newChildren], oldChildren, parentElement)
+    }
+  }
+
+  createNewElement({ tag, props, children }) {
+    const element = document.createElement(tag)
+    this.setAttributes(element, props)
+
+    if (typeof children === "string") {
+      element.textContent = children
+    } else if (Array.isArray(children)) {
+      for (const child of children) element.appendChild(this.createNewElement(child))
+    } else if (!children) {
+      element.innerHTML = ""
+    } else {
+      element.appendChild(children)
+    }
+    return element
+  }
+
+  setAttributes(element, props) {
+    const rest = this.setEventListeners(element, props)
+    for (const key in rest) {
+      element.setAttribute(key, rest[key])
+    }
+  }
+
+  setEventListeners(element, props = {}) {
+    const { onClick, onSubmit, onChange, ...rest } = props
+    element.onclick = onClick
+    element.onsubmit = onSubmit
+    element.oninput = onChange
+    return rest
+  }
+
+  render() {
+    throw new Error("Method not implemented: render")
+  }
+
+  setState(newState) {
+    if (typeof newState === "function") {
+      this.state = newState(this.state)
+    } else {
+      this.state = newState
+    }
+    this.renderChildren()
+  }
+}
+
+class ShadowRootContainer extends WebComponent {
+  constructor() {
+    super()
     this.shadow = this.attachShadow({ mode: "open" })
   }
 
-  connectedCallback() {
-    this.render()
-    for (const element of this.elements) {
-      this.shadow.appendChild(element)
-    }
-  }
-
-  addElement(Component, props = {}) {
-    this.elements.push(new Component({ shadow: this.shadow, ...props }))
-  }
-
-  render() {
-    throw new Error("Method not implemented: render")
-  }
-}
-
-class ElementComponent extends HTMLElement {
-  constructor(props) {
-    super()
-    if (!props.shadow) {
-      throw new Error("ElementComponent must be passed a shadow root")
-    }
-    this.shadow = props.shadow
-  }
-
-  connectedCallback() {
+  renderChildren() {
     const elements = this.render()
-    for (const child of elements) {
-      this.shadow.appendChild(child)
-    }
-  }
-
-  render() {
-    throw new Error("Method not implemented: render")
-  }
-}
-
-class InputComponent extends HTMLInputElement {
-  constructor(props) {
-    super()
-    this.setInputProps(props)
-  }
-
-  connectedCallback() {
-    this.addEventListener("input", this.onChange)
-    for (const key in this.attrs) {
-      this.setAttribute(key, this.attrs[key])
-    }
-  }
-
-  setInputProps(props) {
-    const { onChange, ...attrs } = props
-    this.onChange = onChange
-    this.attrs = attrs
-  }
-}
-
-class ButtonComponent extends HTMLButtonElement {
-  constructor(props) {
-    super()
-    this.setButtonProps(props)
-  }
-
-  connectedCallback() {
-    this.addEventListener("click", this.onClick)
-    for (const key in this.attrs) {
-      this.setAttribute(key, this.attrs[key])
-    }
-  }
-
-  setButtonProps(props) {
-    const { onClick, children, ...attrs } = props
-    this.onClick = onClick
-    this.attrs = attrs
-    this.textContent = children
+    this.compareElements(elements, this.elements, this.shadow)
+    this.elements = elements
   }
 }
 
 customElements.define("shadow-root-container", ShadowRootContainer)
-customElements.define("element-component", ElementComponent)
-customElements.define("button-component", ButtonComponent, { extends: "button" })
-customElements.define("input-component", InputComponent, { extends: "input" })
+customElements.define("element-component", WebComponent)

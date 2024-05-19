@@ -20,19 +20,25 @@ class WebComponent extends HTMLElement {
   }
 
   compareElements(newElements, oldElements, parentElement = this) {
-    const currentElements = parentElement.children
+    const currentElements = parentElement.childNodes
 
     for (let i = 0; i < newElements.length; i++) {
       const newElement = newElements[i]
       const oldElement = oldElements[i]
 
+      if (typeof newElement === "string") {
+        if (newElement !== oldElement) {
+          parentElement.appendChild(newElement)
+        }
+        continue
+      }
       const {
         tag: newElementTag,
         props: newElementProps,
         children: newElementChildren,
       } = newElement
 
-      if (oldElement) {
+      if (oldElement && currentElements[i]) {
         const {
           tag: oldElementTag,
           props: oldElementProps,
@@ -88,7 +94,12 @@ class WebComponent extends HTMLElement {
     if (typeof children === "string") {
       element.textContent = children
     } else if (Array.isArray(children)) {
-      for (const child of children) element.appendChild(this.createNewElement(child))
+      for (const child of children) {
+        if (typeof child === "string") {
+          const textNode = document.createTextNode(child)
+          element.appendChild(textNode)
+        } else element.appendChild(this.createNewElement(child))
+      }
     } else if (!children) {
       element.innerHTML = ""
     } else {

@@ -1,11 +1,9 @@
-/* global ShadowRootContainer, ElementComponent, ButtonComponent, InputComponent */
+/* global WebComponent, ShadowRootContainer */
+/* eslint-disable no-undef */
 
 class App extends ShadowRootContainer {
   render() {
     return [
-      // new CountTracker({ step: 2 }),
-      // new CountTracker({ step: 5 }),
-      // new BasicInputFeedback({ feedback: "Hello, World!" }),
       { tag: "count-tracker", props: { step: 2 } },
       { tag: "count-tracker", props: { step: 5 } },
       { tag: "basic-input-feedback", props: { feedback: "Hello, World!" } },
@@ -25,9 +23,17 @@ class CountTracker extends WebComponent {
     this.setState({ count: newCount })
   }
 
-  render() {
-    this.step = this.getAttribute("step") || 1
+  static get observedAttributes() {
+    return ["step"]
+  }
 
+  propsDidUpdate(name, _oldValue, newValue) {
+    if (name === "step") {
+      this.step = parseInt(newValue) || 1
+    }
+  }
+
+  render() {
     return [
       { tag: "p", children: `Count: ${this.state.count}` },
       {
@@ -65,7 +71,7 @@ class BasicInputFeedback extends WebComponent {
     this.setState({ feedback: value })
   }
 
-  propsDidUpdate(name, oldValue, newValue) {
+  propsDidUpdate(name, _oldValue, newValue) {
     if (name === "feedback") {
       this.state = { feedback: newValue }
     }

@@ -1,3 +1,6 @@
+/* global WebComponent, ShadowRootContainer */
+/* eslint-disable no-undef */
+
 class TodoApp extends ShadowRootContainer {
   render() {
     return [
@@ -25,7 +28,6 @@ class TodoList extends WebComponent {
 
   propsDidUpdate(name, _oldValue, newValue) {
     if (name === "todos") {
-      console.log(newValue)
       this.state = { todos: newValue.split(",") }
     }
   }

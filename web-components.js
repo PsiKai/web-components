@@ -1,126 +1,213 @@
+class DomNode {
+  constructor(attrs, children, parent) {
+    if (typeof attrs === "string") {
+      this.tag = "text"
+      this.children = attrs
+    } else {
+      this.tag = attrs.tag
+      this.props = attrs.props
+      this.children = children
+    }
+    this.parent = parent
+  }
+
+  get domElement() {
+    return this._domElement
+  }
+
+  set domElement(element) {
+    this._domElement = element
+  }
+
+  isSameTag(node) {
+    return this.tag === node.tag
+  }
+
+  isSameProps(node) {
+    for (const key in this.props) {
+      if (!Object.is(this.props[key], node[key])) return true
+    }
+    return false
+  }
+
+  createDomElement() {
+    if (this.tag === "text") {
+      this.domElement = document.createTextNode(this.children)
+    } else {
+      this.domElement = document.createElement(this.tag)
+      this.setAttributes(this.props)
+    }
+    return this.domElement
+  }
+
+  setAttributes(props) {
+    if (!props) return
+
+    const { onClick, onSubmit, onChange, ...rest } = props
+    this.domElement.onclick = onClick
+    this.domElement.onsubmit = onSubmit
+    this.domElement.oninput = onChange
+
+    for (const key in rest) {
+      this.domElement.setAttribute(key, rest[key])
+    }
+  }
+}
+
+class VirtualDOM {
+  constructor() {
+    this.scheduledUpdates = []
+    this.tree = []
+  }
+
+  static create(elements, root) {
+    const newDom = new VirtualDOM()
+    const tagName = root.host?.tagName?.toLowerCase() || root.tagName.toLowerCase()
+    const vDomRoot = new DomNode({ tag: tagName }, elements, root)
+    vDomRoot.domElement = root
+    newDom.tree = newDom.buildDomTree(elements, vDomRoot)
+    return newDom
+  }
+
+  buildDomTree(elements, root) {
+    if (!elements) return null
+
+    return elements.map(element => {
+      let newNode = new DomNode(element, null, root)
+      let children = element.children
+
+      if (Array.isArray(children)) {
+        children = this.buildDomTree(children, newNode)
+      } else if (typeof children === "string") {
+      } else if (!!children) {
+        children = this.buildDomTree([children], newNode)
+      }
+
+      newNode.children ||= children
+      return newNode
+    })
+  }
+
+  reconcile(oldDom = [], newDom = this.tree) {
+    for (let i = 0; i < newDom.length; i++) {
+      const newElement = newDom[i]
+      const oldElement = oldDom[i]
+
+      if (!oldElement) {
+        const newDomElement = newElement.createDomElement()
+
+        this.scheduledUpdates.push(() => {
+          newElement.parent.domElement.appendChild(newDomElement)
+        })
+
+        if (Array.isArray(newElement.children)) {
+          this.reconcile([], newElement.children)
+        } else if (typeof newElement.children === "string") {
+          this.scheduledUpdates.push(() => {
+            newDomElement.textContent = newElement.children
+          })
+        } else if (!!newElement.children) {
+          this.reconcile([], [newElement.children])
+        }
+        continue
+      }
+
+      if (typeof newElement === "string") {
+        if (newElement !== oldElement) {
+          this.scheduledUpdates.push(() => {
+            oldElement.textContent = newElement
+          })
+        }
+        continue
+      }
+
+      if (!newElement.isSameTag(oldElement)) {
+        const newDomElement = newElement.createDomElement()
+        this.scheduledUpdates.push(() => {
+          oldElement.domElement.replaceWith(newDomElement)
+        })
+        continue
+      }
+
+      newElement.domElement = oldElement?.domElement
+
+      if (!newElement.isSameProps(oldElement)) {
+        this.scheduledUpdates.push(() => {
+          oldElement.setAttributes(newElement.props)
+        })
+        newElement.domElement = oldElement.domElement
+      }
+
+      if (Array.isArray(newElement.children)) {
+        this.reconcile(oldElement.children, newElement.children)
+        continue
+      }
+
+      if (typeof newElement.children === "string") {
+        if (newElement.children !== oldElement.children) {
+          this.scheduledUpdates.push(() => {
+            oldElement.domElement.textContent = newElement.children
+          })
+        }
+        continue
+      }
+
+      if (!!newElement.children) {
+        this.reconcile(oldElement.children, [newElement.children])
+        continue
+      }
+    }
+  }
+
+  scheduleUpdates() {
+    const scheduler = new DomScheduler(this.scheduledUpdates)
+    scheduler.executeUpdates()
+  }
+}
+
+class DomScheduler {
+  constructor(scheduledUpdates = [], batchSize = 10) {
+    this.scheduledUpdates = scheduledUpdates
+    this.batchSize = batchSize
+  }
+
+  scheduleUpdate(update) {
+    this.scheduledUpdates.push(update)
+  }
+
+  runUpdates(updates) {
+    updates.forEach(update => update())
+  }
+
+  executeUpdates() {
+    while (this.scheduledUpdates.length) {
+      const batch = this.scheduledUpdates.slice(0, this.batchSize)
+      this.scheduledUpdates = this.scheduledUpdates.slice(this.batchSize)
+      requestAnimationFrame(() => this.runUpdates(batch))
+    }
+  }
+}
+
 class WebComponent extends HTMLElement {
   constructor() {
     super()
     this.state = {}
-    this.elements = []
   }
 
   connectedCallback() {
     this.renderChildren()
   }
 
-  attributeChangedCallback(_name, _oldValue, _newValue) {
-    this.propsDidUpdate()
+  attributeChangedCallback(name, oldValue, newValue) {
+    this.propsDidUpdate(name, oldValue, newValue)
   }
 
   renderChildren() {
     const elements = this.render()
-    this.compareElements(elements, this.elements)
-    this.elements = elements
-  }
-
-  compareElements(newElements, oldElements, parentElement = this) {
-    const currentElements = parentElement.childNodes
-
-    for (let i = 0; i < newElements.length; i++) {
-      const newElement = newElements[i]
-      const oldElement = oldElements[i]
-
-      if (typeof newElement === "string") {
-        if (newElement !== oldElement) {
-          parentElement.appendChild(newElement)
-        }
-        continue
-      }
-      const {
-        tag: newElementTag,
-        props: newElementProps,
-        children: newElementChildren,
-      } = newElement
-
-      if (oldElement && currentElements[i]) {
-        const {
-          tag: oldElementTag,
-          props: oldElementProps,
-          children: oldElementChildren,
-        } = oldElement
-
-        if (newElementTag !== oldElementTag) {
-          this.replaceChild(this.createNewElement(newElement), currentElements[i])
-        } else {
-          const shouldUpdateProps = this.compareProps(newElementProps, oldElementProps)
-          if (shouldUpdateProps) {
-            this.setAttributes(currentElements[i], newElementProps)
-          }
-          this.compareChildren(newElementChildren, oldElementChildren, currentElements[i])
-        }
-      } else {
-        parentElement.appendChild(this.createNewElement(newElement))
-      }
-    }
-  }
-
-  replaceChild(newElement, oldElement) {
-    oldElement.replaceWith(newElement)
-  }
-
-  compareProps(newProps, oldProps) {
-    for (const key in newProps) {
-      if (!Object.is(newProps[key], oldProps[key])) {
-        return true
-      }
-    }
-    return false
-  }
-
-  compareChildren(newChildren, oldChildren, parentElement) {
-    if (typeof newChildren === "string") {
-      if (newChildren !== oldChildren) {
-        parentElement.textContent = newChildren
-      }
-    } else if (!newChildren) {
-      parentElement.innerHTML = ""
-    } else if (Array.isArray(newChildren)) {
-      this.compareElements(newChildren, oldChildren, parentElement)
-    } else {
-      this.compareElements([newChildren], oldChildren, parentElement)
-    }
-  }
-
-  createNewElement({ tag, props, children }) {
-    const element = document.createElement(tag)
-    this.setAttributes(element, props)
-
-    if (typeof children === "string") {
-      element.textContent = children
-    } else if (Array.isArray(children)) {
-      for (const child of children) {
-        if (typeof child === "string") {
-          const textNode = document.createTextNode(child)
-          element.appendChild(textNode)
-        } else element.appendChild(this.createNewElement(child))
-      }
-    } else if (!children) {
-      element.innerHTML = ""
-    } else {
-      element.appendChild(children)
-    }
-    return element
-  }
-
-  setAttributes(element, props) {
-    const rest = this.setEventListeners(element, props)
-    for (const key in rest) {
-      element.setAttribute(key, rest[key])
-    }
-  }
-
-  setEventListeners(element, props = {}) {
-    const { onClick, onSubmit, onChange, ...rest } = props
-    element.onclick = onClick
-    element.onsubmit = onSubmit
-    element.oninput = onChange
-    return rest
+    const newVirtualDom = VirtualDOM.create(elements, this.shadow || this)
+    newVirtualDom.reconcile(this.currentDom?.tree)
+    this.currentDom = newVirtualDom
+    newVirtualDom.scheduleUpdates()
   }
 
   render() {
@@ -141,12 +228,6 @@ class ShadowRootContainer extends WebComponent {
   constructor() {
     super()
     this.shadow = this.attachShadow({ mode: "open" })
-  }
-
-  renderChildren() {
-    const elements = this.render()
-    this.compareElements(elements, this.elements, this.shadow)
-    this.elements = elements
   }
 }
 

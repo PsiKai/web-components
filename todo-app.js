@@ -10,8 +10,8 @@ class TodoApp extends ShadowRootContainer {
 }
 
 class TodoList extends WebComponent {
-  constructor(props) {
-    super(props)
+  constructor() {
+    super()
     this.state = { todos: [] }
   }
 
@@ -23,8 +23,11 @@ class TodoList extends WebComponent {
     return ["todos"]
   }
 
-  propsDidUpdate() {
-    this.state = { todos: this.getAttribute("todos").split(",") }
+  propsDidUpdate(name, _oldValue, newValue) {
+    if (name === "todos") {
+      console.log(newValue)
+      this.state = { todos: newValue.split(",") }
+    }
   }
 
   render() {
@@ -80,6 +83,7 @@ class TodoForm extends WebComponent {
                   type: "text",
                   onChange: this.setNewTodo.bind(this),
                   value: this.state.newTodo,
+                  placeholder: "Plan your next project",
                 },
               },
             ],

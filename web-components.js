@@ -25,8 +25,9 @@ class DomNode {
 
   isSameProps(node) {
     for (const key in this.props) {
-      if (!Object.is(this.props[key], node[key])) return true
+      if (!Object.is(this.props[key], node.props[key])) return true
     }
+    if (node.props === undefined && this.props === undefined) return true
     return false
   }
 
@@ -94,6 +95,7 @@ class VirtualDOM {
       const oldElement = oldDom[i]
 
       if (!oldElement) {
+        console.log("oldElement is null", { newElement })
         const newDomElement = newElement.createDomElement()
 
         this.scheduledUpdates.push(() => {
@@ -113,6 +115,7 @@ class VirtualDOM {
       }
 
       if (typeof newElement === "string") {
+        console.log("newElement is string", { newElement, oldElement })
         if (newElement !== oldElement) {
           this.scheduledUpdates.push(() => {
             oldElement.textContent = newElement
@@ -122,6 +125,7 @@ class VirtualDOM {
       }
 
       if (!newElement.isSameTag(oldElement)) {
+        console.log("newElement is different tag", { newElement, oldElement })
         const newDomElement = newElement.createDomElement()
         this.scheduledUpdates.push(() => {
           oldElement.domElement.replaceWith(newDomElement)
@@ -132,6 +136,7 @@ class VirtualDOM {
       newElement.domElement = oldElement?.domElement
 
       if (!newElement.isSameProps(oldElement)) {
+        console.log("newElement is different props", { newElement, oldElement })
         this.scheduledUpdates.push(() => {
           oldElement.setAttributes(newElement.props)
         })
@@ -139,11 +144,13 @@ class VirtualDOM {
       }
 
       if (Array.isArray(newElement.children)) {
+        console.log("newElement has array of children", newElement)
         this.reconcile(oldElement.children, newElement.children)
         continue
       }
 
       if (typeof newElement.children === "string") {
+        console.log("newElement string as child", { newElement, oldElement })
         if (newElement.children !== oldElement.children) {
           this.scheduledUpdates.push(() => {
             oldElement.domElement.textContent = newElement.children
@@ -153,8 +160,23 @@ class VirtualDOM {
       }
 
       if (!!newElement.children) {
+        console.log("newElement has single child", { newElement, oldElement })
         this.reconcile(oldElement.children, [newElement.children])
         continue
+      }
+    }
+
+    if (oldDom.length > newDom.length) {
+      this.trimBranches(oldDom, newDom)
+    }
+  }
+
+  trimBranches(oldDom, newDom) {
+    if (oldDom.length > newDom.length) {
+      for (let i = oldDom.length - 1; i >= newDom.length; i--) {
+        this.scheduledUpdates.push(() => {
+          oldDom[i].domElement.remove()
+        })
       }
     }
   }
@@ -203,11 +225,12 @@ class WebComponent extends HTMLElement {
   }
 
   renderChildren() {
+    console.log("renderChildren")
     const elements = this.render()
     const newVirtualDom = VirtualDOM.create(elements, this.shadow || this)
     newVirtualDom.reconcile(this.currentDom?.tree)
-    this.currentDom = newVirtualDom
     newVirtualDom.scheduleUpdates()
+    this.currentDom = newVirtualDom
   }
 
   render() {

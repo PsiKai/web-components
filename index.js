@@ -73,7 +73,7 @@ class BasicInputFeedback extends WebComponent {
 
   propsDidUpdate(name, _oldValue, newValue) {
     if (name === "feedback") {
-      this.state = { feedback: newValue }
+      this.setState({ feedback: newValue })
     }
   }
 

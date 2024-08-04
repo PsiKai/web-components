@@ -6,7 +6,9 @@ class TodoApp extends ShadowRootContainer {
     return [
       {
         tag: "todo-list",
-        props: { todos: ["Learn about Web Components", "Build a Web Component"] },
+        props: {
+          todos: ["Learn about Web Components", "Build a Web Component"],
+        },
       },
     ]
   }
@@ -22,20 +24,36 @@ class TodoList extends WebComponent {
     this.setState(prev => ({ todos: [...prev.todos, newTodo] }))
   }
 
+  removeItem(e) {
+    const todo = e.target.previousSibling.textContent
+    this.setState(prev => ({
+      todos: prev.todos.filter(item => item !== todo),
+    }))
+  }
+
   static get observedAttributes() {
     return ["todos"]
   }
 
   propsDidUpdate(name, _oldValue, newValue) {
     if (name === "todos") {
-      this.state = { todos: newValue.split(",") }
+      this.setState({ todos: newValue.split(",") })
     }
   }
 
   render() {
     return [
       { tag: "h2", children: "Todo List" },
-      { tag: "div", children: this.state.todos.map(todo => ({ tag: "p", children: todo })) },
+      {
+        tag: "div",
+        children: this.state.todos.map(todo => ({
+          tag: "p",
+          children: [
+            todo,
+            { tag: "button", props: { onClick: this.removeItem.bind(this) }, children: "X" },
+          ],
+        })),
+      },
       {
         tag: "todo-form",
         props: {
